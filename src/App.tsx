@@ -1,88 +1,117 @@
-import { useEffect, useState, useCallback } from 'react';
-import Slides from './slides';
+import { useState, useEffect, useCallback } from 'react';
+import Cover from './slides/Cover';
+import Slide02 from './slides/Slide02';
+import Slide03 from './slides/Slide03';
+import Slide04 from './slides/Slide04';
+import Slide05 from './slides/Slide05';
+import Slide06 from './slides/Slide06';
+import Slide07 from './slides/Slide07';
+import Slide08 from './slides/Slide08';
+import Slide09 from './slides/Slide09';
+import Slide10 from './slides/Slide10';
+
+const TOTAL_SLIDES = 10;
 
 export default function App() {
-  const [index, setIndex] = useState(0);
-  const total = Slides.length;
+  const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const [animating, setAnimating] = useState(false);
 
-  const next = useCallback(() => setIndex(i => Math.min(i + 1, total - 1)), [total]);
-  const prev = useCallback(() => setIndex(i => Math.max(i - 1, 0)), []);
+  const goNext = useCallback(() => {
+    if (animating || current >= TOTAL_SLIDES - 1) return;
+    setDirection('next');
+    setAnimating(true);
+    setTimeout(() => {
+      setCurrent(c => c + 1);
+      setAnimating(false);
+    }, 600);
+  }, [animating, current]);
+
+  const goPrev = useCallback(() => {
+    if (animating || current <= 0) return;
+    setDirection('prev');
+    setAnimating(true);
+    setTimeout(() => {
+      setCurrent(c => c - 1);
+      setAnimating(false);
+    }, 600);
+  }, [animating, current]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter' || e.key === 'PageDown') { e.preventDefault(); next(); }
-      else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') { e.preventDefault(); prev(); }
-      else if (e.key === 'Home') { setIndex(0); }
-      else if (e.key === 'End') { setIndex(total - 1); }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') goNext();
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goPrev();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [next, prev, total]);
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [goNext, goPrev]);
 
-  const Current = Slides[index];
+  const slides = [
+    <Cover key={0} />,
+    <Slide02 key={1} />,
+    <Slide03 key={2} />,
+    <Slide04 key={3} />,
+    <Slide05 key={4} />,
+    <Slide06 key={5} />,
+    <Slide07 key={6} />,
+    <Slide08 key={7} />,
+    <Slide09 key={8} />,
+    <Slide10 key={9} />,
+  ];
 
   return (
-    <div className="w-full h-full relative select-none">
-      {/* Click anywhere to advance, except on prev arrow */}
+    <div
+      className="relative w-screen h-screen overflow-hidden cursor-pointer select-none"
+      onClick={goNext}
+    >
+      {/* Slide wrapper */}
       <div
-        className="absolute inset-0 cursor-pointer"
-        onClick={next}
-        onContextMenu={(e) => { e.preventDefault(); prev(); }}
+        key={current}
+        className={`absolute inset-0 ${
+          animating
+            ? direction === 'next'
+              ? 'slide-exit-next'
+              : 'slide-exit-prev'
+            : 'slide-enter'
+        }`}
       >
-        <div key={index} className="w-full h-full slide-enter">
-          <Current />
-        </div>
+        {slides[current]}
       </div>
 
-      {/* Top bar: brand + counter */}
-      <div className="absolute top-0 left-0 right-0 px-8 py-5 flex items-center justify-between z-50 pointer-events-none">
-        <div className="flex items-center gap-3 text-white/80 text-xs tracking-[0.3em] uppercase mix-blend-difference">
-          <div className="w-6 h-px bg-white/60" />
-          <span className="font-serif italic">Chronicle&nbsp;·&nbsp;时代回响</span>
-        </div>
-        <div className="text-white/80 text-xs tracking-[0.3em] mix-blend-difference font-mono">
-          {String(index + 1).padStart(2, '0')} <span className="opacity-50">/ {String(total).padStart(2, '0')}</span>
-        </div>
-      </div>
-
-      {/* Bottom progress + navigation */}
-      <div className="absolute bottom-0 left-0 right-0 z-50">
-        <div className="px-8 pb-5 flex items-end justify-between pointer-events-none">
-          <div className="text-white/70 text-[10px] tracking-[0.4em] uppercase mix-blend-difference font-sans">
-            点击任意位置 · 继续 →
-          </div>
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <button
-              onClick={(e) => { e.stopPropagation(); prev(); }}
-              className="text-white/80 hover:text-white text-xs tracking-widest mix-blend-difference px-3 py-1 transition"
-              aria-label="prev"
-            >← PREV</button>
-            <button
-              onClick={(e) => { e.stopPropagation(); next(); }}
-              className="text-white/80 hover:text-white text-xs tracking-widest mix-blend-difference px-3 py-1 transition"
-              aria-label="next"
-            >NEXT →</button>
-          </div>
-        </div>
-        {/* Progress bar */}
-        <div className="h-[2px] bg-white/10">
-          <div
-            className="h-full bg-white/80 transition-all duration-700 ease-out"
-            style={{ width: `${((index + 1) / total) * 100}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Slide dots */}
-      <div className="absolute right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 pointer-events-auto">
-        {Slides.map((_, i) => (
+      {/* Navigation dots */}
+      <div
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-50"
+        onClick={e => e.stopPropagation()}
+      >
+        {Array.from({ length: TOTAL_SLIDES }).map((_, i) => (
           <button
             key={i}
-            onClick={(e) => { e.stopPropagation(); setIndex(i); }}
-            className={`w-1.5 rounded-full transition-all mix-blend-difference ${i === index ? 'h-6 bg-white' : 'h-1.5 bg-white/40 hover:bg-white/70'}`}
-            aria-label={`go to ${i + 1}`}
+            onClick={() => {
+              if (animating) return;
+              setDirection(i > current ? 'next' : 'prev');
+              setAnimating(true);
+              setTimeout(() => { setCurrent(i); setAnimating(false); }, 600);
+            }}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              i === current ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/70'
+            }`}
           />
         ))}
+      </div>
+
+      {/* Prev arrow */}
+      {current > 0 && (
+        <button
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white/70 hover:text-white transition-all backdrop-blur-sm"
+          onClick={e => { e.stopPropagation(); goPrev(); }}
+        >
+          ‹
+        </button>
+      )}
+
+      {/* Slide counter */}
+      <div className="absolute top-5 right-6 z-50 text-white/40 text-xs font-light tracking-widest">
+        {String(current + 1).padStart(2, '0')} / {String(TOTAL_SLIDES).padStart(2, '0')}
       </div>
     </div>
   );
